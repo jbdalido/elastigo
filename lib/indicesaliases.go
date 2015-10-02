@@ -17,11 +17,12 @@ import (
 )
 
 type JsonAliases struct {
-	Actions []JsonAliasAdd `json:"actions"`
+	Actions []JsonAliasAction `json:"actions"`
 }
 
-type JsonAliasAdd struct {
-	Add JsonAlias `json:"add"`
+type JsonAliasAction struct {
+	Add    JsonAlias `json:"add,omitempty"`
+	Remove JsonAlias `json:"remove,omitempty"`
 }
 
 type JsonAlias struct {
@@ -40,13 +41,102 @@ func (c *Conn) AddAlias(index string, alias string) (BaseResponse, error) {
 		return retval, fmt.Errorf("You must specify an index to create the alias on")
 	}
 
-	jsonAliases := JsonAliases{}
-	jsonAliasAdd := JsonAliasAdd{}
-	jsonAliasAdd.Add.Alias = alias
-	jsonAliasAdd.Add.Index = index
-	jsonAliases.Actions = append(jsonAliases.Actions, jsonAliasAdd)
-	requestBody, err := json.Marshal(jsonAliases)
+	jsonAliases := JsonAliases{
+		Actions: []JsonAliasAction{
+			{
+				Add: JsonAlias{
+					Alias: alias,
+					Index: index,
+				},
+			},
+		},
+	}
 
+	requestBody, err := json.Marshal(jsonAliases)
+	if err != nil {
+		return retval, err
+	}
+
+	body, err := c.DoCommand("POST", url, nil, requestBody)
+	if err != nil {
+		return retval, err
+	}
+
+	jsonErr := json.Unmarshal(body, &retval)
+	if jsonErr != nil {
+		return retval, jsonErr
+	}
+
+	return retval, err
+}
+
+// The API allows you to remova an index alias through an API.
+func (c *Conn) RemoveAlias(index string, alias string) (BaseResponse, error) {
+	var url string
+	var retval BaseResponse
+
+	if len(index) > 0 {
+		url = "/_aliases"
+	} else {
+		return retval, fmt.Errorf("You must specify an index to create the alias on")
+	}
+
+	jsonAliases := JsonAliases{
+		Actions: []JsonAliasAction{
+			{
+				Remove: JsonAlias{
+					Alias: alias,
+					Index: index,
+				},
+			},
+		},
+	}
+
+	requestBody, err := json.Marshal(jsonAliases)
+	if err != nil {
+		return retval, err
+	}
+
+	body, err := c.DoCommand("POST", url, nil, requestBody)
+	if err != nil {
+		return retval, err
+	}
+
+	jsonErr := json.Unmarshal(body, &retval)
+	if jsonErr != nil {
+		return retval, jsonErr
+	}
+
+	return retval, err
+}
+
+// The API allows you to remova an index alias through an API.
+func (c *Conn) ReplaceAlias(index string, alias string, newIndex string) (BaseResponse, error) {
+	var url string
+	var retval BaseResponse
+
+	if len(index) > 0 {
+		url = "/_aliases"
+	} else {
+		return retval, fmt.Errorf("You must specify an index to create the alias on")
+	}
+
+	jsonAliases := JsonAliases{
+		Actions: []JsonAliasAction{
+			{
+				Remove: JsonAlias{
+					Alias: alias,
+					Index: index,
+				},
+				Add: JsonAlias{
+					Alias: alias,
+					Index: newIndex,
+				},
+			},
+		},
+	}
+
+	requestBody, err := json.Marshal(jsonAliases)
 	if err != nil {
 		return retval, err
 	}
