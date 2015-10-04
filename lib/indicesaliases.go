@@ -17,18 +17,20 @@ import (
 )
 
 type JsonAliases struct {
-	Actions []JsonAliasAction `json:"actions"`
+	Actions []JsonAliasAction `json:"actions,omitempty"`
 }
 
 type JsonAliasAction struct {
-	Add    JsonAlias `json:"add,omitempty"`
-	Remove JsonAlias `json:"remove,omitempty"`
+	Remove *JsonAlias `json:"remove,omitempty"`
+	Add    *JsonAlias `json:"add,omitempty"`
 }
 
 type JsonAlias struct {
-	Index string `json:"index"`
-	Alias string `json:"alias"`
+	Index string `json:"index,omitempty"`
+	Alias string `json:"alias,omitempty"`
 }
+
+type GetAliasesResponse map[string]interface{}
 
 // The API allows you to create an index alias through an API.
 func (c *Conn) AddAlias(index string, alias string) (BaseResponse, error) {
@@ -44,7 +46,7 @@ func (c *Conn) AddAlias(index string, alias string) (BaseResponse, error) {
 	jsonAliases := JsonAliases{
 		Actions: []JsonAliasAction{
 			{
-				Add: JsonAlias{
+				Add: &JsonAlias{
 					Alias: alias,
 					Index: index,
 				},
@@ -84,7 +86,7 @@ func (c *Conn) RemoveAlias(index string, alias string) (BaseResponse, error) {
 	jsonAliases := JsonAliases{
 		Actions: []JsonAliasAction{
 			{
-				Remove: JsonAlias{
+				Remove: &JsonAlias{
 					Alias: alias,
 					Index: index,
 				},
@@ -110,46 +112,25 @@ func (c *Conn) RemoveAlias(index string, alias string) (BaseResponse, error) {
 	return retval, err
 }
 
-// The API allows you to remova an index alias through an API.
-func (c *Conn) ReplaceAlias(index string, alias string, newIndex string) (BaseResponse, error) {
+func (c *Conn) GetIndexFromAlias(alias string) (GetAliasesResponse, error) {
+	var retval GetAliasesResponse
 	var url string
-	var retval BaseResponse
+	if alias != "" {
+		url = fmt.Sprintf("/_alias/%s", alias)
 
-	if len(index) > 0 {
-		url = "/_aliases"
 	} else {
-		return retval, fmt.Errorf("You must specify an index to create the alias on")
+		url = "/_alias"
 	}
-
-	jsonAliases := JsonAliases{
-		Actions: []JsonAliasAction{
-			{
-				Remove: JsonAlias{
-					Alias: alias,
-					Index: index,
-				},
-				Add: JsonAlias{
-					Alias: alias,
-					Index: newIndex,
-				},
-			},
-		},
-	}
-
-	requestBody, err := json.Marshal(jsonAliases)
+	body, err := c.DoCommand("GET", url, nil, nil)
 	if err != nil {
 		return retval, err
 	}
-
-	body, err := c.DoCommand("POST", url, nil, requestBody)
-	if err != nil {
-		return retval, err
+	if err == nil {
+		// marshall into json
+		jsonErr := json.Unmarshal(body, &retval)
+		if jsonErr != nil {
+			return retval, jsonErr
+		}
 	}
-
-	jsonErr := json.Unmarshal(body, &retval)
-	if jsonErr != nil {
-		return retval, jsonErr
-	}
-
 	return retval, err
 }
