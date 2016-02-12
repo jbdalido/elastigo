@@ -112,6 +112,49 @@ func (c *Conn) RemoveAlias(index string, alias string) (BaseResponse, error) {
 	return retval, err
 }
 
+func (c *Conn) SwitchAlias(index, oldalias, alias string) (BaseResponse, error) {
+	var url string
+	var retval BaseResponse
+
+	if len(index) > 0 {
+		url = "/_aliases"
+	} else {
+		return retval, fmt.Errorf("You must specify an index to create the alias on")
+	}
+
+	jsonAliases := JsonAliases{
+		Actions: []JsonAliasAction{
+			{
+				Remove: &JsonAlias{
+					Alias: oldalias,
+					Index: index,
+				},
+				Add: &JsonAlias{
+					Alias: alias,
+					Index: index,
+				},
+			},
+		},
+	}
+
+	requestBody, err := json.Marshal(jsonAliases)
+	if err != nil {
+		return retval, err
+	}
+
+	body, err := c.DoCommand("POST", url, nil, requestBody)
+	if err != nil {
+		return retval, err
+	}
+
+	jsonErr := json.Unmarshal(body, &retval)
+	if jsonErr != nil {
+		return retval, jsonErr
+	}
+
+	return retval, err
+}
+
 func (c *Conn) GetIndexFromAlias(alias string) (GetAliasesResponse, error) {
 	var retval GetAliasesResponse
 	var url string
