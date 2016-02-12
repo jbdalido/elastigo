@@ -112,7 +112,7 @@ func (c *Conn) RemoveAlias(index string, alias string) (BaseResponse, error) {
 	return retval, err
 }
 
-func (c *Conn) SwitchAlias(index, oldalias, alias string) (BaseResponse, error) {
+func (c *Conn) SwitchAlias(index, oldindex, alias string) (BaseResponse, error) {
 	var url string
 	var retval BaseResponse
 
@@ -126,8 +126,8 @@ func (c *Conn) SwitchAlias(index, oldalias, alias string) (BaseResponse, error) 
 		Actions: []JsonAliasAction{
 			{
 				Remove: &JsonAlias{
-					Alias: oldalias,
-					Index: index,
+					Alias: alias,
+					Index: oldindex,
 				},
 				Add: &JsonAlias{
 					Alias: alias,
